@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChatBOt</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: var(--background-color, #f4f4f9);
+      color: var(--text-color, #333333);
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+      max-width: 100%;
+      background: var(--background-color, #ffffff);
+      color: var(--text-color, #333333);
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .chat-header {
+      background-color: var(--header-background, #6200ea);
+      color: var(--header-text-color, #ffffff);
+      text-align: center;
+      padding: 20px;
+      font-size: 20px;
+      font-weight: bold;
+      position: relative;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .toggle-dark-mode,
+    .clear-button {
+      background-color: var(--button-background, #007BFF); /* Light blue for light mode */
+      color: #fff;
+      border: none;
+      padding: 5px 10px;
+      font-size: 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .toggle-dark-mode:hover,
+    .clear-button:hover {
+      background-color: var(--button-hover, #0056b3); /* Dark blue hover effect in light mode */
+    }
+
+    .chat-footer {
+      text-align: center;
+      padding: 10px;
+      font-size: 12px;
+      color: var(--footer-text-color, #888888);
+    }
+
+    .chat-box {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      background-color: var(--background-color, #f4f4f9);
+    }
+
+    .message {
+      max-width: 75%;
+      padding: 10px 15px;
+      border-radius: 20px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background-color: var(--user-message-background, #6200ea);
+      color: var(--user-message-text, #ffffff);
+    }
+
+    .message.assistant {
+      align-self: flex-start;
+      background-color: var(--assistant-message-background, #e0e0e0);
+      color: var(--assistant-message-text, #333333);
+    }
+
+    .chat-input-container {
+      display: flex;
+      border-top: 1px solid var(--border-color, #ddd);
+      padding: 10px;
+    }
+
+    .chat-input {
+      flex: 1;
+      border: none;
+      padding: 15px;
+      font-size: 16px;
+      border-radius: 5px;
+      outline: none;
+      box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.1);
+      background-color: var(--input-background, #ffffff);
+      color: var(--text-color, #333333);
+    }
+
+    .chat-send-button {
+      background-color: var(--header-background, #6200ea);
+      color: var(--header-text-color, #ffffff);
+      border: none;
+      padding: 0 20px;
+      font-size: 16px;
+      margin-left: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .chat-send-button:hover {
+      background-color: var(--header-hover, #4e00b8);
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">
+      ChatBot
+      <div class="header-buttons">
+        <button id="toggle-dark-mode" class="toggle-dark-mode">Toggle Dark Mode</button>
+        <button id="clear-button" class="clear-button">Clear Chat</button>
+      </div>
+    </div>
+    <div class="chat-box" id="chat-box"></div>
+    <div class="chat-input-container">
+      <input type="text" id="chat-input" class="chat-input" placeholder="Type your message..." />
+      <button id="chat-send-button" class="chat-send-button">Send</button>
+    </div>
+    <div class="chat-footer">
+      Made by Abhishek Radhakrishnan powered by Meta
+    </div>
+  </div>
+
+  <script>
+    const chatBox = document.getElementById('chat-box');
+    const chatInput = document.getElementById('chat-input');
+    const chatSendButton = document.getElementById('chat-send-button');
+    const clearButton = document.getElementById('clear-button');
+    const toggleDarkModeButton = document.getElementById('toggle-dark-mode');
+    let darkMode = false;
+    let chatHistory = [];
+
+    const addMessage = (message, role) => {
+      const messageElement = document.createElement('div');
+      messageElement.classList.add('message', role);
+      messageElement.textContent = message;
+      chatBox.appendChild(messageElement);
+      chatBox.scrollTop = chatBox.scrollHeight; // Scroll to the latest message
+    };
+
+    const sendMessage = async () => {
+      const userInput = chatInput.value.trim();
+      if (!userInput) return;
+
+      // Add user's message to the chat
+      addMessage(userInput, 'user');
+      chatHistory.push({ role: 'user', content: userInput });
+      chatInput.value = ''; // Clear the input field
+
+      // Send the user's message to the server
+      try {
+        const response = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: chatHistory })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to get a response from the server.');
+        }
+
+        const data = await response.json();
+        const reply = data.reply || 'Oops, I didn\'t understand that.';
+        addMessage(reply, 'assistant'); // Add assistant's response to the chat
+
+        // Add assistant's response to the chat history
+        chatHistory.push({ role: 'assistant', content: reply });
+
+      } catch (error) {
+        addMessage('Error: Unable to connect to the server.', 'assistant');
+        console.error(error);
+      }
+    };
+
+    const clearChat = async () => {
+      try {
+        const response = await fetch('/clear', { method: 'POST' });
+        if (response.ok) {
+          chatBox.innerHTML = ''; // Clear the chat box on the client side
+          chatHistory = []; // Clear the chat history
+        }
+      } catch (error) {
+        console.error('Failed to clear chat:', error);
+      }
+    };
+
+    const toggleDarkMode = () => {
+      darkMode = !darkMode;
+
+      // Update background and text colors based on dark mode or light mode
+      document.body.style.setProperty('--background-color', darkMode ? '#1e1e1e' : '#f4f4f9');
+      document.body.style.setProperty('--text-color', darkMode ? '#ffffff' : '#333333');
+      document.body.style.setProperty('--header-background', darkMode ? '#333333' : '#6200ea');
+      document.body.style.setProperty('--header-text-color', darkMode ? '#ffffff' : '#ffffff');
+      document.body.style.setProperty('--user-message-background', darkMode ? '#4e4e4e' : '#6200ea');
+      document.body.style.setProperty('--user-message-text', darkMode ? '#ffffff' : '#ffffff');
+      document.body.style.setProperty('--assistant-message-background', darkMode ? '#444444' : '#e0e0e0');
+      document.body.style.setProperty('--assistant-message-text', darkMode ? '#ffffff' : '#333333');
+      document.body.style.setProperty('--border-color', darkMode ? '#555555' : '#ddd');
+      document.body.style.setProperty('--input-background', darkMode ? '#333333' : '#ffffff');
+
+      // Button colors
+      document.body.style.setProperty('--button-background', darkMode ? '#444444' : '#007BFF');  // Light blue for light mode
+      document.body.style.setProperty('--button-hover', darkMode ? '#555555' : '#0056b3'); // Dark blue for hover in light mode
+      document.body.style.setProperty('--clear-button-background', darkMode ? '#444444' : '#007BFF');
+      document.body.style.setProperty('--clear-button-hover', darkMode ? '#555555' : '#0056b3');
+    };
+
+    // Add event listeners
+    chatSendButton.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        sendMessage();
+      }
+    });
+    clearButton.addEventListener('click', clearChat);
+    toggleDarkModeButton.addEventListener('click', toggleDarkMode);
+  </script>
+</body>
+</html>
